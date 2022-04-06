@@ -2,9 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Epic.OnlineServices.Lobby;
-using Epic.OnlineServices.Auth;
 using UnityEngine.UI;
-using EpicTransport;
+using TMPro;
 
 public class CustomLobbyUI : EOSLobbyUI
 {
@@ -19,7 +18,7 @@ public class CustomLobbyUI : EOSLobbyUI
         base.OnDisable();
         FindLobbiesSucceeded -= OnLobbyFoundSucceeded;
     }
-    public void Create(Text code)
+    public void Create(TMP_Text code)
     {
         string name = code.text;
         LobbyPermissionLevel permissionLevel = LobbyPermissionLevel.Publicadvertised;
@@ -27,7 +26,8 @@ public class CustomLobbyUI : EOSLobbyUI
         CreateLobby(8, permissionLevel, false, data);
         Debug.Log("Lobby Created");
     }
-    public void Join(Text code)
+
+    public void Join(TMP_Text code)
     {
         LobbySearch search = new LobbySearch();
         LobbySearchSetParameterOptions options = new LobbySearchSetParameterOptions()
