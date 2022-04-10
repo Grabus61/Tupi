@@ -34,7 +34,7 @@ public class SteamFriendsManager : MonoBehaviour
     }
 
     public static async System.Threading.Tasks.Task<Texture2D> GetTextureFromSteamIdAsync(SteamId id) {
-        var img = await SteamFriends.GetLargeAvatarAsync(SteamClient.SteamId);
+        var img = await SteamFriends.GetLargeAvatarAsync(id);
         Steamworks.Data.Image image = img.Value;
 
         Texture2D texture = new Texture2D((int) image.Width, (int)image.Height);
