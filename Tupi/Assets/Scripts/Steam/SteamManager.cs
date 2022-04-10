@@ -5,7 +5,8 @@ public class SteamManager : MonoBehaviour
 {
     public uint appID = 480; //480 = spacewar
 
-    private void Start() {
+    private void Awake() {
+        DontDestroyOnLoad(this);
         try
         {
             Steamworks.SteamClient.Init(appID, true);
