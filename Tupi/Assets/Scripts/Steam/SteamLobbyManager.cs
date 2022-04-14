@@ -7,11 +7,17 @@ using UnityEngine.UI;
 using Steamworks;
 using Steamworks.Data;
 using TMPro;
+using Mirror;
 
-public class SteamLobbyManager : MonoBehaviour
-{
+
+public class SteamLobbyManager : NetworkBehaviour
+{   
+    public static SteamLobbyManager instance;
+    
+    public NetworkManager network;
     private Lobby currentLobby;
-    public int maxPlayers = 4;
+    private int maxPlayers = 4;
+    private const string HostAddressKey = "HostAddress";
 
     //Events
     public UnityEvent OnCreate;
@@ -35,6 +41,10 @@ public class SteamLobbyManager : MonoBehaviour
 
     #region Unity Methods
 
+    private void Awake() {
+        instance = this;
+    }
+
     private void Start() {
         //Callback Events
         Steamworks.SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
@@ -50,16 +60,28 @@ public class SteamLobbyManager : MonoBehaviour
     #region Lobby Callback Events
     public void OnLobbyCreated(Result result, Lobby lobby){
         if(result != Result.OK){
+            #if UNITY_EDITOR
             Debug.LogWarning("Failed to create lobby: " + result);
+            #endif
         }
         else{
+            #if UNITY_EDITOR
             Debug.Log("Lobby Create Success!");
+            #endif
+            network.StartHost();
+
+            lobby.SetData(HostAddressKey, SteamClient.SteamId.ToString());
+
             OnCreate.Invoke();
         }    
     }
 
     public async void OnLobbyMemberJoined(Lobby lobby, Friend friend){
-        Debug.Log($"{friend.Name} joined the lobby");
+        #if UNITY_EDITOR
+        if(friend.Id != SteamClient.SteamId){
+            Debug.Log($"{friend.Name} joined the lobby");
+        }
+        #endif
         GameObject obj = Instantiate(inLobbyFriend, playerContent);
         obj.name = friend.Name;
         obj.GetComponentInChildren<TMP_Text>().text = friend.Name;
@@ -76,6 +98,10 @@ public class SteamLobbyManager : MonoBehaviour
     }
 
     public async void OnLobbyEntered(Lobby lobby){
+        //Everyone
+        currentLobby = lobby;
+
+        //Lobby UI Elements
         foreach(var friend in currentLobby.Members){
             if(friend.Id != SteamClient.SteamId){
                 GameObject friendobj = Instantiate(inLobbyFriend, playerContent);
@@ -86,18 +112,27 @@ public class SteamLobbyManager : MonoBehaviour
             }
         }   
 
-        Debug.Log("Client Entered the Lobby!");
+        #if UNITY_EDITOR
+            Debug.Log("Client Entered the Lobby!");
+        #endif
         GameObject obj = Instantiate(inLobbyFriend, playerContent);
         obj.name = SteamClient.Name;
         obj.GetComponentInChildren<TMP_Text>().text = SteamClient.Name;
         obj.GetComponentInChildren<RawImage>().texture = await SteamFriendsManager.GetTextureFromSteamIdAsync(SteamClient.SteamId);
         inLobby.Add(SteamClient.SteamId, obj);      
+
+        //Clients
+        if(NetworkServer.active){return;}
+        network.networkAddress = lobby.GetData(HostAddressKey);
+        network.StartClient();
     }
 
     public async void OnGameLobbyJoinRequested(Lobby joinedLobby, SteamId id){
         RoomEnter joinedLobbySuccess = await joinedLobby.Join();
         if(joinedLobbySuccess != RoomEnter.Success){
+            #if UNITY_EDITOR
             Debug.Log("Join Lobby Failed");
+            #endif
         }
         else{
             currentLobby = joinedLobby;
@@ -125,7 +160,9 @@ public class SteamLobbyManager : MonoBehaviour
         {
             var createLobbyOutput = await SteamMatchmaking.CreateLobbyAsync(maxPlayers);
             if(!createLobbyOutput.HasValue){
+                #if UNITY_EDITOR
                 Debug.LogWarning("Lobby Created but not Correctly Instatiated.");
+                #endif
                 return false;
             }
 
@@ -157,7 +194,9 @@ public class SteamLobbyManager : MonoBehaviour
         }
 
         if(result == false){
+            #if UNITY_EDITOR
             Debug.LogWarning("Send Chat Message Failed!");
+            #endif
         }
         else{
             chatInput.text = "";
@@ -186,7 +225,9 @@ public class SteamLobbyManager : MonoBehaviour
     public async void JoinLobby(Lobby lobby){
         RoomEnter joinedLobbySuccess = await lobby.Join();
         if(joinedLobbySuccess != RoomEnter.Success){
+            #if UNITY_EDITOR
             Debug.Log("Join Lobby Failed");
+            #endif
         }
         else{
             currentLobby = lobby;
@@ -196,17 +237,21 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void LeaveLobby(){
         try
-        {
+        {   
+            
             currentLobby.Leave();
             OnLeave.Invoke();
             foreach(var user in inLobby.Values){
                 Destroy(user);
             }
             inLobby.Clear();
+            
         }
         catch (System.Exception e)
         {
+            #if UNITY_EDITOR
             Debug.LogError("Lobby Leave Failed: " + e.Message);
+            #endif
         }
     }
 
